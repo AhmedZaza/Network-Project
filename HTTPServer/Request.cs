@@ -21,7 +21,6 @@ namespace HTTPServer
 
     class Request
     {
-        string[] requestLines;
         RequestMethod method;
         public string relativeURI;
         Dictionary<string, string> headerLines;
@@ -34,7 +33,7 @@ namespace HTTPServer
         HTTPVersion httpVersion;
         string requestString;
         string[] contentLines;
-
+        string[] request_lines;
         public Request(string requestString)
         {
             this.requestString = requestString;
@@ -43,15 +42,15 @@ namespace HTTPServer
         /// Parses the request string and loads the request line, header lines and content, returns false if there is a parsing error
         /// </summary>
         /// <returns>True if parsing succeeds, false otherwise.</returns>
-        String[] request_line; 
+        
         public bool ParseRequest()
         {
             //throw new NotImplementedException();
 
             //TODO: parse the receivedRequest using the \r\n delimeter   
 
-           request_line = this.requestString.Split(new[] { "\r\n" }, StringSplitOptions.None);
-            if (request_line.Length < 3)
+           request_lines = this.requestString.Split(new[] { "\r\n" }, StringSplitOptions.None);
+            if (request_lines.Length < 3)
                 return false;
             // check that there is atleast 3 lines: Request line, Host Header, Blank line (usually 4 lines with the last empty line for empty content)
 
@@ -70,7 +69,7 @@ namespace HTTPServer
         {
             
             //throw new NotImplementedException();
-            string[] method = request_line[0].Split(' ');
+            string[] method = request_lines[0].Split(' ');
 
             if (method[2] == "HTTP/1.1")
             {
@@ -92,10 +91,10 @@ namespace HTTPServer
             else
                 return false;
 
+
             this.relativeURI = method[1].Remove(0,1);
 
-                return (true && ValidateIsURI(this.relativeURI)); 
-             
+            return ValidateIsURI(this.relativeURI); 
         }
 
         private bool ValidateIsURI(string uri)
@@ -106,22 +105,32 @@ namespace HTTPServer
         private bool LoadHeaderLines()
         {
              string [] header;
-             headerLines = new Dictionary<string, string>(); 
-           //throw new NotImplementedException();
-             for (int i = 1; i < request_line.Length; i++)
+            string value;
+            headerLines = new Dictionary<string, string>();
+            bool is_hosted = false;
+             for (int i = 1; i < request_lines.Length; i++)
              {
-                 if (request_line[i] == "")
-                     continue; 
-                 header = request_line[i].Split(':');
-                 headerLines.Add(header[0], header[1]);
+                 if (request_lines[i] == "")
+                     break;
+                 header = request_lines[i].Split(':');
+                if (header[0] == "Host")
+                    is_hosted = true;
+                value = "";
+                for(int j=1;j<header.Length;j++)
+                {
+                    if (j != 1)
+                        value += ":";
+                    value += header[j];
+                }
+                 headerLines.Add(header[0], value);
              }
-            return true; 
+            return (is_hosted || this.httpVersion==HTTPVersion.HTTP10); 
         }
 
         private bool ValidateBlankLine()
         {
            // throw new NotImplementedException();
-            foreach (string s in request_line)
+            foreach (string s in request_lines)
             {
                 if (s == "")
                     return true;

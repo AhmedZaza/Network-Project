@@ -9,7 +9,7 @@ using System.IO;
 
 namespace HTTPServer
 {
-    class Server
+    class Server  
     {
         Socket serverSocket;
 
@@ -83,10 +83,11 @@ namespace HTTPServer
             clientsocket.Close();
             // TODO: close client socket
         }
-        Response server_response;
-        string physical_path; 
+        
         Response HandleRequest(Request request)
         {
+            Response server_response;
+            string physical_path;
             //throw new NotImplementedException();
             string content;
             try
@@ -101,10 +102,9 @@ namespace HTTPServer
                     return server_response; 
                 }
                 //TODO: map the relativeURI in request to get the physical path of the resource.
-                
-                //TODO: check for redirect
 
-                else if (Configuration.RedirectionRules.ContainsKey(request.relativeURI))
+                //TODO: check for redirect
+                else if(Configuration.RedirectionRules.ContainsKey(request.relativeURI))
                 {
                     string path;
                     path = GetRedirectionPagePathIFExist(request.relativeURI);
@@ -116,6 +116,7 @@ namespace HTTPServer
                     }
                     else
                     {
+                        Console.WriteLine("Redirected To " + Configuration.RedirectionRules[request.relativeURI]);
                         content = LoadDefaultPage(Configuration.RedirectionDefaultPageName);
                         server_response = new Response(StatusCode.Redirect, "text/html", content, path);
                     }
@@ -131,7 +132,6 @@ namespace HTTPServer
                 }
                 else
                 {
-                    
                     content = LoadDefaultPage(request.relativeURI);
                     server_response = new Response(StatusCode.OK, "text/html", content, null);
                     return server_response;
@@ -152,7 +152,6 @@ namespace HTTPServer
                 server_response = new Response(StatusCode.InternalServerError, "text/html", content, null);
                 return server_response;
             }
-            return null;
         }
 
         private string GetRedirectionPagePathIFExist(string relativePath)
