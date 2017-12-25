@@ -24,7 +24,7 @@ namespace HTTPServer
         RequestMethod method;
         public string relativeURI;
         Dictionary<string, string> headerLines;
-
+        Dictionary<string, string> Content_lines;
         public Dictionary<string, string> HeaderLines
         {
             get { return headerLines; }
@@ -32,7 +32,6 @@ namespace HTTPServer
 
         HTTPVersion httpVersion;
         string requestString;
-        string[] contentLines;
         string[] request_lines;
         public Request(string requestString)
         {
@@ -61,7 +60,11 @@ namespace HTTPServer
             // Load header lines into HeaderLines dictionary
             
             if (ParseRequestLine() && ValidateBlankLine() && LoadHeaderLines())
-                return true;  
+            {
+                if(this.method==RequestMethod.POST)
+                return LoadContectLines();
+                return true;
+            }
             return false ; 
         }
 
@@ -126,7 +129,79 @@ namespace HTTPServer
              }
             return (is_hosted || this.httpVersion==HTTPVersion.HTTP10); 
         }
-
+        public static char HexStringTochar(string hexString)
+        {
+            byte bytes;
+            bytes = Convert.ToByte(hexString, 16);
+            char c = Convert.ToChar(bytes);
+            return c;
+        }
+        private bool LoadContectLines()
+        {
+            bool is_blacnk_line = false;
+            for (int i = 1; i < request_lines.Length; i++)
+            {
+                if(is_blacnk_line)
+                {
+                    string[] all = request_lines[i].Split('&');
+                    if(all.Length>=2)
+                    {
+                        string[] user_side = all[0].Split('=');
+                        string[] pass_side = all[1].Split('=');
+                        string user_id = "";
+                        if (user_side.Length >=2)
+                        user_id = user_side[1];
+                        string pass = "";
+                        if (pass_side.Length >= 2)
+                            pass = pass_side[1];
+                        for(int l=0;l<user_id.Length;l++)
+                        {
+                            if(user_id[l] == '%')
+                            {
+                                if(l+2 <user_id.Length)
+                                {
+                                    string numb = "";
+                                    numb += user_id[l + 1];
+                                    numb += user_id[l + 2];
+                                    char c = HexStringTochar(numb);
+                                    user_id = user_id.Remove(l, 3);
+                                    user_id = user_id.Insert(l, c.ToString());
+                                }
+                            }
+                        }
+                        for (int l = 0; l < pass.Length; l++)
+                        {
+                            if (pass[l] == '%')
+                            {
+                                if (l + 2 < pass.Length)
+                                {
+                                    string numb = "";
+                                    numb += pass[l + 1];
+                                    numb += pass[l + 2];
+                                    char c = HexStringTochar(numb);
+                                    pass = pass.Remove(l, 3);
+                                    pass = pass.Insert(l, c.ToString());
+                                }
+                                else
+                                    return false;
+                            }
+                        }
+                        Console.WriteLine("UserID = "+user_id);
+                        Console.WriteLine("Pass = "+pass);
+                        Content_lines = new Dictionary<string, string>();
+                        Content_lines.Add("UserID", user_id);
+                        Content_lines.Add("Pass", pass);
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                if (request_lines[i] == "")
+                    is_blacnk_line = true;
+            }
+            return true;
+        }
         private bool ValidateBlankLine()
         {
            // throw new NotImplementedException();
